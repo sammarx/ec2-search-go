@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"regexp"
 	"strings"
@@ -18,8 +19,16 @@ func exitErrorf(msg string, args ...interface{}) {
 }
 
 func main() {
+	var instid bool
+	var ipaddr bool
+
+	flag.BoolVar(&instid, "id", false, "return instance id")
+	flag.BoolVar(&ipaddr, "ip", false, "return instance ip")
+	flag.Parse()
+
 	if len(os.Args) == 1 {
 		fmt.Println("Need search critera")
+		flag.Usage()
 		os.Exit(1)
 	}
 
@@ -28,7 +37,7 @@ func main() {
 		exitErrorf("failed to load config, %v", err)
 	}
 
-	searchString := os.Args[1]
+	searchString := flag.Arg(0)
 
 	awsRegion := os.Getenv("AWS_REGION")
 
@@ -98,11 +107,25 @@ func main() {
 		exitErrorf("failed to describe instances, %s, %v", awsRegion, err)
 	}
 
-	for _, r := range res.Reservations {
-		for _, i := range r.Instances {
-			for _, t := range i.Tags {
-				if *t.Key == "Name" {
-					fmt.Println(*t.Value)
+	if instid == true {
+		for _, r := range res.Reservations {
+			for _, i := range r.Instances {
+				fmt.Println(*i.InstanceId)
+			}
+		}
+	} else if ipaddr {
+		for _, r := range res.Reservations {
+			for _, i := range r.Instances {
+				fmt.Println(*i.PrivateIpAddress)
+			}
+		}
+	} else {
+		for _, r := range res.Reservations {
+			for _, i := range r.Instances {
+				for _, t := range i.Tags {
+					if *t.Key == "Name" {
+						fmt.Println(*t.Value)
+					}
 				}
 			}
 		}
